@@ -45,4 +45,5 @@ jscoverage_lib/
 test/e2e/reports
 test/e2e/screenshots
 
+dist/
 .deploy-*
