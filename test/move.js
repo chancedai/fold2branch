@@ -7,9 +7,8 @@ new folder2branch.Deployer({
     pattern: '**/!(*.html)',
     branch:'esinaimgcn',
     repo:'https://github.com/chancedai/folder2branch',
-    finish: function (result) {
-        // 上传完成后
-        console.log(result);
+    finish: function () {
+
     }
 });
 
@@ -21,8 +20,7 @@ new folder2branch.Deployer({
     pattern: '**/*.html',
     branch:'server',
     repo:'https://github.com/chancedai/folder2branch',
-    finish: function (result) {
-        // 上传完成后
-        console.log(result);
+    finish: function () {
+
     }
 });
