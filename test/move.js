@@ -6,7 +6,7 @@ new folder2branch.Deployer({
     // 不部署 html 
     pattern: '**/!(*.html)',
     branch:'esinaimgcn',
-    repo:'https://github.com/chancedai/folder2branch',
+    repo:'https://git.staff.sina.com.cn/ssfe/folder2branch',
     finish: function () {
 
     }
@@ -19,7 +19,7 @@ new folder2branch.Deployer({
     // 只部署 html
     pattern: '**/*.html',
     branch:'server',
-    repo:'https://github.com/chancedai/folder2branch',
+    repo:'https://git.staff.sina.com.cn/ssfe/folder2branch',
     finish: function () {
 
     }

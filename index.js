@@ -161,7 +161,6 @@ class Deployer {
   }
 
   _move(fn) {
-    const self = this;
     const {
       pattern,
       folder
