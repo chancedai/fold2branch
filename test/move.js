@@ -2,7 +2,7 @@ const folder2branch = require('../index.js');
 new folder2branch.Deployer({
 
     folder: 'test/_dist',
-
+    // debug:true,
     // 不部署 html 
     pattern: '**/!(*.html)',
     branch:'esinaimgcn',
@@ -15,7 +15,7 @@ new folder2branch.Deployer({
 new folder2branch.Deployer({
 
     folder: 'test/_dist',
-
+    // debug: false,
     // 只部署 html
     pattern: '**/*.html',
     branch:'server',

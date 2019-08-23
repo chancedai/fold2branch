@@ -10,23 +10,23 @@ const mkdirp = require('mkdirp');
 
 const fs = require('fs');
 const path = require('path');
-// const os = require('os');
+const os = require('os');
 
 const cwd = process.cwd();
 
-function delDir(path){
+function delDir(path) {
   let files = [];
-  if(fs.existsSync(path)){
-      files = fs.readdirSync(path);
-      files.forEach((file, index) => {
-          let curPath = path + "/" + file;
-          if(fs.statSync(curPath).isDirectory()){
-              delDir(curPath); //递归删除文件夹
-          } else {
-              fs.unlinkSync(curPath); //删除文件
-          }
-      });
-      fs.rmdirSync(path);
+  if (fs.existsSync(path)) {
+    files = fs.readdirSync(path);
+    files.forEach((file, index) => {
+      let curPath = path + "/" + file;
+      if (fs.statSync(curPath).isDirectory()) {
+        delDir(curPath); //递归删除文件夹
+      } else {
+        fs.unlinkSync(curPath); //删除文件
+      }
+    });
+    fs.rmdirSync(path);
   }
 }
 
@@ -35,6 +35,9 @@ class Deployer {
   constructor({
     // 是否在终端显示上传信息
     log = true,
+
+    // debug 模式下，会在项目创建临时目录，方便用户查看推送内容，并且默认打开 log;
+    debug = false,
 
     // 要推送到分支的文件夹
     folder = '',
@@ -62,6 +65,7 @@ class Deployer {
     const self = this;
     this.options = {
       log,
+      debug,
       folder,
       branch,
       repo,
@@ -79,7 +83,7 @@ class Deployer {
     }
     this._create(function () {
       self._move(function () {
-        self.git();
+        self._gitPush();
       });
     });
   }
@@ -90,51 +94,69 @@ class Deployer {
     const tempFolder = this._getTempFolderName();
     const self = this;
     const {
-      folder,
-      email,
-      name
+      debug
     } = this.options;
     fs.access(tempFolder, function (err) {
       if (err) {
-        self._log('创建临时目录(' + tempFolder + ')');
         mkdirp(tempFolder, function (err) {
           if (err) {
             throw Error(err);
           }
-          self._log('初始化 git');
-          execSync([
-            `cd ${tempFolder}`,
-            `git config user.email "${email||''}"`,
-            `git config user.name "${name||''}"`,
-            'git init ',
-            `git commit --allow-empty -m "First commit"`
-          ].join('&&'), {
-            cwd
-          });
 
-
+          // 全新的文件夹，需要初始化 git
+          self._gitInit(tempFolder);
           fn();
 
         });
       } else {
-        delDir(tempFolder);
-        fn();
+        if (debug) { // 使用已经使用过的临时目录，不用 git 初始化，并且需要清理文件夹
+          delDir(tempFolder);
+          fn();
+        } else { // 使用系统的临时目录，所以是全新的文件夹，需要初始化 git
+          self._gitInit(tempFolder);
+          fn();
+        }
+
       }
+    });
+  }
+  _gitInit(tempFolder) {
+    const {
+      email,
+      name
+    } = this.options;
+    this._log('初始化 git');
+    execSync([
+      `cd ${tempFolder}`,
+      'git init ',
+      `git config user.email "${email||''}"`,
+      `git config user.name "${name||''}"`,
+      `git commit --allow-empty -m "First commit"`
+    ].join('&&'), {
+      cwd
     });
   }
   _getTempFolderName() {
     // 以.deploy+文件夹名+分支名为，临时目录,如 .deploy-dist-esinaimgcn(存放前端部署静态资源)，.deploy-dist-server存放后端部署资源
     const {
       folder,
-      branch
+      branch,
+      debug
     } = this.options;
-    this.tempFolder = '.deploy-' + folder.split('/').join('-') + '-' + branch;
+    if (debug) {
+      this.tempFolder = '.folder2branch-' + folder.split('/').join('-') + '-' + branch;
+    } else {
+      this.tempFolder = fs.mkdtempSync(path.join(os.tmpdir(), '.folder2branch-'));
+    }
+
+    this._log('创建临时目录 ' + this.tempFolder + ' ');
+
     return this.tempFolder;
   }
 
   _log(msg) {
     if (this.options.log) {
-      console.log(msg);
+      console.log(chalk.green('* ' + msg));
     }
   }
 
@@ -145,16 +167,16 @@ class Deployer {
       folder
     } = this.options;
 
-    this._log('复制目标目录（' + folder + '）文件到临时目录(' + this.tempFolder + ')...');
-    console.log(path.join(folder, '/') + pattern);
+    this._log('复制目标目录 ' + folder + ' ' + pattern + ' 文件到临时目录 ' + this.tempFolder + ' ...');
     copy(path.join(folder, '/') + pattern, this.tempFolder, function (err, files) {
       if (err) throw err;
       fn();
     });
   }
-  git() {
+  _gitPush() {
 
     const {
+      pattern,
       folder,
       branch,
       repo,
@@ -164,13 +186,12 @@ class Deployer {
     // 执行前
     this.options.before.call(this);
     const tempFolder = this.tempFolder;
-    console.log(tempFolder);
 
-    this._log('开始推送 ' + folder + ' 到分支 ' + branch + '...');
+    this._log('开始推送 ' + folder + ' ' + pattern + ' 到分支 ' + branch + '...');
     execSync([
       `cd ${tempFolder}`,
       'git add .',
-      `git commit --allow-empty -m "${msg||'folder2branch'}"`
+      `git commit --allow-empty -m "${msg||'folder2branch push'}"`
     ].join('&&'), {
       cwd
     });
@@ -181,7 +202,7 @@ class Deployer {
 
     this.options.finish.call(this);
 
-    this._log('推送 ' + folder + ' 完成:）');
+    this._log('推送 ' + folder + ' ' + pattern + ' 完成:）');
   }
 }
 
